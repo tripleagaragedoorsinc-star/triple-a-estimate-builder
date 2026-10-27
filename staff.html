@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Triple A | Staff Login</title>
+<style>body{font-family:system-ui;background:#f3f5f9;color:#17283c;margin:0}header{background:#112c48;color:white;padding:22px}main{max-width:500px;margin:40px auto;padding:20px}.card{background:white;padding:24px;border-radius:14px;box-shadow:0 4px 18px #1232}input{display:block;width:100%;box-sizing:border-box;padding:12px;margin:8px 0 16px;border:1px solid #c8d1dd;border-radius:8px}button{background:#db631d;border:0;border-radius:8px;color:white;padding:12px 18px;cursor:pointer}.muted{color:#64748b;font-size:13px}.hidden{display:none}</style></head>
+<body><header><strong>TRIPLE A GARAGE DOORS</strong><h2>Staff Workspace</h2></header>
+<main><div class="card"><p id="message" class="muted">Loading...</p>
+<div id="signin"><h3>Sign In</h3><label>Email<input id="email" type="email" autocomplete="email"></label><label>Password<input id="password" type="password" autocomplete="current-password"></label><button id="login">Sign In</button></div>
+<div id="dashboard" class="hidden"><h3>Estimate Drafts</h3><p id="role"></p><div id="drafts"></div><label>Job Reference<input id="job"></label><label>Customer Name<input id="customer"></label><button id="save">Save Draft</button> <button id="logout">Sign Out</button><p class="muted">Do not enter supplier costs here. Owner-only pricing interface is under development.</p></div>
+</div></main>
+<script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './supabase-config.js';
+const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const el=id=>document.getElementById(id);
+function message(s){el('message').textContent=s}
+async function load(){const {data,error}=await db.from('eb_estimates').select('job_reference,customer_name,status').order('created_at',{ascending:false}).limit(25);if(error){message(error.message);return}el('drafts').replaceChildren();for(const x of data){const p=document.createElement('p');p.textContent=[x.job_reference,x.customer_name,x.status].filter(Boolean).join(' · ');el('drafts').appendChild(p)}}
+async function refresh(){const {data:{user}}=await db.auth.getUser();if(!user){el('signin').classList.remove('hidden');el('dashboard').classList.add('hidden');message('Authorized staff only');return}const {data:member,error}=await db.from('eb_members').select('role').eq('user_id',user.id).maybeSingle();if(error||!member){await db.auth.signOut();message('Account not authorized. Contact the owner.');return}el('signin').classList.add('hidden');el('dashboard').classList.remove('hidden');el('role').textContent='Role: '+member.role;message('Signed in');await load()}
+el('login').onclick=async()=>{message('Signing in...');const {error}=await db.auth.signInWithPassword({email:el('email').value,password:el('password').value});if(error)message(error.message);else await refresh()};
+el('logout').onclick=async()=>{await db.auth.signOut();await refresh()};
+el('save').onclick=async()=>{const {data:{user}}=await db.auth.getUser();if(!user)return;const {error}=await db.from('eb_estimates').insert({created_by:user.id,job_reference:el('job').value,customer_name:el('customer').value});if(error)message(error.message);else{el('job').value='';el('customer').value='';message('Draft saved');await load()}};
+refresh();
+</script></body></html>
