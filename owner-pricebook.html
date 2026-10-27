@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Owner Pricebook</title><style>body{font:16px system-ui;background:#f3f5f9;color:#142b44;margin:0}header{background:#122b48;color:white;padding:22px}main{max-width:800px;margin:25px auto;padding:20px}.card{background:white;border-radius:12px;padding:22px}li{padding:12px;border-bottom:1px solid #ddd}</style></head><body><header><h2>Triple A — Owner Pricebook</h2></header><main><div class="card"><p id="status">Checking owner access...</p><ul id="rows"></ul><a href="./staff.html">Back to Estimate Builder</a></div></main><script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.76.1';
+import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from './supabase-config.js';
+const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const status=document.getElementById('status');
+async function start(){
+try{
+const {data:{user}}=await db.auth.getUser();
+if(!user){status.textContent='Sign in to the staff workspace first.';return;}
+const {data:member,error}=await db.from('eb_members').select('role').eq('user_id',user.id).maybeSingle();
+if(error||member?.role!=='owner'){status.textContent='Owner access required.';return;}
+const result=await db.from('eb_price_benchmarks').select('manufacturer,model,classification,supplier_unit_cost,target_material_price,quote_sample_size').order('model');
+if(result.error){status.textContent=result.error.message;return;}
+status.textContent='Verified source costs and formula-based material targets. Sales averages are not yet established.';
+for(const p of result.data||[]){const li=document.createElement('li');li.textContent=p.manufacturer+' '+p.model+' — Supplier $'+Number(p.supplier_unit_cost).toFixed(2)+' | Material target $'+Number(p.target_material_price).toFixed(2)+' | Quotes: '+p.quote_sample_size;document.getElementById('rows').append(li);}
+}catch(e){status.textContent='Unable to load pricebook.';}
+}
+start();
+</script></body></html>
