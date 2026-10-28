@@ -29,9 +29,8 @@ export function PricebookPage() {
   const filteredPrices = useMemo(() => {
     const q = search.toLowerCase();
     return prices.filter((p) =>
-      p.manufacturer.toLowerCase().includes(q) ||
-      p.model.toLowerCase().includes(q) ||
-      p.sku?.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      p.source_reference?.toLowerCase().includes(q) ||
       p.supplier.toLowerCase().includes(q)
     );
   }, [prices, search]);
@@ -99,9 +98,9 @@ export function PricebookPage() {
               <thead>
                 <tr>
                   <th>Supplier</th>
-                  <th>Manufacturer</th>
-                  <th>Model</th>
-                  <th>SKU</th>
+                  <th>Description</th>
+                  <th>Size</th>
+                  <th>Reference</th>
                   <th style={{ textAlign: "right" }}>Unit Cost</th>
                   <th>Invoice</th>
                   <th>Invoice Date</th>
@@ -112,15 +111,15 @@ export function PricebookPage() {
                 {filteredPrices.map((p) => (
                   <tr key={p.id}>
                     <td>{p.supplier}</td>
-                    <td>{p.manufacturer}</td>
-                    <td>{p.model}</td>
-                    <td className="font-mono">{p.sku || "—"}</td>
-                    <td style={{ textAlign: "right" }} className="money">{formatCurrency(p.unit_cost)}</td>
-                    <td>{p.invoice_number || "—"}</td>
-                    <td className="text-muted">{p.invoice_date ? new Date(p.invoice_date).toLocaleDateString() : "—"}</td>
+                    <td>{p.description}</td>
+                    <td>{p.size_width ?? "—"} × {p.size_height ?? "—"}</td>
+                    <td className="font-mono">{p.source_reference || "—"}</td>
+                    <td style={{ textAlign: "right" }} className="money">{formatCurrency(p.cost)}</td>
+                    <td>{p.source_reference || "—"}</td>
+                    <td className="text-muted">{p.price_date ? new Date(p.price_date).toLocaleDateString() : "—"}</td>
                     <td>
-                      <span className={`badge ${p.verification_status === "verified" ? "badge-approved" : p.verification_status === "pending" ? "badge-sent" : "badge-dismissed"}`}>
-                        {p.verification_status}
+                      <span className={`badge ${p.verified ? "badge-approved" : !p.verified ? "badge-sent" : "badge-dismissed"}`}>
+                        {p.verified ? "verified" : "unverified"}
                       </span>
                     </td>
                   </tr>
