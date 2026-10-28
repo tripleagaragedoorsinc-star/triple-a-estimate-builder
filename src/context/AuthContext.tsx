@@ -28,7 +28,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const hasRecoveryHash = window.location.hash.includes("type=recovery");
+
     supabase.auth.getSession().then(({ data }) => {
+      if (hasRecoveryHash) {
+        setIsRecovery(true);
+        setLoading(false);
+        return;
+      }
       if (data.session?.user) {
         fetchMember(data.session.user.id)
           .then((member) => {
@@ -112,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = async (email: string) => {
     if (!supabase) return { error: "Password reset is not available in demo mode." };
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname,
+      redirectTo: window.location.origin + "/",
     });
     if (error) return { error: error.message };
     return { error: null };
@@ -124,6 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) return { error: error.message };
     setIsRecovery(false);
+    if (window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
     return { error: null };
   };
 
