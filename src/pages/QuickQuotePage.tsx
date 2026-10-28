@@ -10,15 +10,18 @@ const money=(v:number)=>Math.round(v*100)/100;
 export function QuickQuotePage(){
  const {session}=useAuth();const navigate=useNavigate();
  const [prices,setPrices]=useState<SalesPrice[]>([]);const [error,setError]=useState("");const [loading,setLoading]=useState(true);
- const [detail,setDetail]=useState(false);const [style,setStyle]=useState("Standard");const [sizeType,setSizeType]=useState("Single");
+ const [detail,setDetail]=useState(false);const [style,setStyle]=useState("All Styles");const [sizeType,setSizeType]=useState("Any Size");
  const [manufacturer,setManufacturer]=useState("");const [model,setModel]=useState("");const [width,setWidth]=useState("");const [height,setHeight]=useState("");
  const [color,setColor]=useState("");const [windows,setWindows]=useState("");const [openerModel,setOpenerModel]=useState("");const [openerRail,setOpenerRail]=useState("");
  const [quantity,setQuantity]=useState(1);const [labor,setLabor]=useState(650);const [discount,setDiscount]=useState(0);
  const [dispose,setDispose]=useState(true);const [oldOpeners,setOldOpeners]=useState(0);
- const [customer,setCustomer]=useState("");const [job,setJob]=useState("");const [notes,setNotes]=useState("");const [saving,setSaving]=useState(false);
+ const [customer,setCustomer]=useState("");const [job,setJob]=useState("");const [notes,setNotes]=useState("");const [saving,setSaving]=useState(false);const [message,setMessage]=useState("");
  useEffect(()=>{fetchSalesPrices().then(setPrices).catch(e=>setError(e instanceof Error?e.message:"Unable to load approved prices")).finally(()=>setLoading(false))},[]);
  const doors=useMemo(()=>prices.filter(p=>p.category==="door"),[prices]);
  const openers=useMemo(()=>prices.filter(p=>p.category==="opener"),[prices]);
+ const styleName=(p:SalesPrice)=>p.design==="carriage_house"?"Carriage House":p.design==="flush_modern"?"Modern / Flush":p.design==="full_view_glass"?"Modern / Glass":"Standard";
+ const shortlist=doors.filter(p=>(style==="All Styles"||styleName(p)===style)&&(sizeType==="Any Size"||(sizeType==="Single"?Number(p.width_ft)<=10:Number(p.width_ft)>10)));
+ const pick=(p:SalesPrice)=>{setManufacturer(p.manufacturer);setModel(p.model);setWidth(String(p.width_ft??""));setHeight(String(p.height_ft??""));setColor(p.color||"");setWindows(p.window_option||"No Windows");setMessage("");};
  const manufacturers=unique(doors.map(p=>p.manufacturer));
  const models=unique(doors.filter(p=>!manufacturer||p.manufacturer===manufacturer).map(p=>p.model));
  const candidates=doors.filter(p=>(!manufacturer||p.manufacturer===manufacturer)&&(!model||p.model===model));
@@ -39,14 +42,34 @@ export function QuickQuotePage(){
  const breakdown=calculatePricing(options);
  const ready=!!exactDoor&&(!openerModel||!!exactOpener)&&!saving;
  const save=async()=>{if(!session||!ready)return;setSaving(true);setError("");try{const result=await saveEstimate(session.user_id,job,customer,"","","",options,"draft");navigate("/estimates/"+result.id)}catch(e){setError(e instanceof Error?e.message:"Unable to save estimate")}finally{setSaving(false)}};
+ const copy=async()=>{if(!ready)return;const text=[
+ "TRIPLE A GARAGE DOORS — ESTIMATE", "Customer: "+(customer||"Not provided"),"Job reference: "+(job||"Not provided"),
+ "Door: "+manufacturer+" "+model+" "+width+"x"+height+" "+color+" "+(windows||"No Windows"),
+ "Quantity: "+quantity,"Door materials: "+formatCurrency(doorPrice*quantity),
+ openerModel?"Opener: LiftMaster "+openerModel+" / "+rail+" rail — "+formatCurrency(openerPrice):"No new opener",
+ "Installation labor: "+formatCurrency(breakdown.laborTotal),
+ "Disposal: "+formatCurrency(breakdown.doorDisposalTotal+breakdown.openerDisposalTotal),
+ "Estimated tax: "+formatCurrency(breakdown.tax),"ESTIMATED TOTAL: "+formatCurrency(breakdown.total),
+ notes?"Technician notes: "+notes:"","Taxability requires confirmation before final quote."].filter(Boolean).join("\\n");
+ try{await navigator.clipboard.writeText(text);setMessage("Estimate copied for ServiceTitan.");}catch{setMessage("Clipboard unavailable; use Print / PDF.");}};
  const select=(label:string,value:string,change:(v:string)=>void,values:string[],placeholder:string)=> <label className="form-field"><span>{label}</span><select value={value} onChange={e=>change(e.target.value)}><option value="">{placeholder}</option>{values.map(v=><option key={v} value={v}>{v}</option>)}</select></label>;
  return <div className="fade-in" style={{maxWidth:950,margin:"0 auto"}}>
-  <div className="card"><div className="card-header"><h2>Smart Door Quote</h2></div><p className="text-muted">Choose a door. Pricing comes from the approved sales catalog, never supplier cost.</p>
+  <div className="card"><div className="card-header"><h2>Smart Door Quote</h2></div><p className="text-muted">Pick a door below to fill its verified model, size, finish and windows automatically. Supplier costs are never shown.</p>
   <div className="flex gap-2 mb-4"><button className={"btn "+(!detail?"btn-primary":"btn-outline")} onClick={()=>setDetail(false)}>Quick Quote</button><button className={"btn "+(detail?"btn-primary":"btn-outline")} onClick={()=>setDetail(true)}>Detailed Quote</button></div>
   {error&&<div className="alert alert-error">{error}</div>}
+  {!loading&&<div style={{marginBottom:18}}>
+   <div className="form-grid">
+   <label className="form-field"><span>Door Style</span><select value={style} onChange={e=>setStyle(e.target.value)}>{["All Styles","Standard","Carriage House","Modern / Flush","Modern / Glass"].map(x=><option key={x}>{x}</option>)}</select></label>
+   <label className="form-field"><span>Door Width</span><select value={sizeType} onChange={e=>setSizeType(e.target.value)}>{["Any Size","Single","Double"].map(x=><option key={x}>{x}</option>)}</select></label>
+   </div><p className="text-muted">Available priced configurations: {shortlist.length}. Select a card for instant pricing.</p>
+   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:10,maxHeight:360,overflowY:"auto"}}>
+   {shortlist.map(p=><button key={p.catalog_id} type="button" onClick={()=>pick(p)} style={{textAlign:"left",background:exactDoor?.catalog_id===p.catalog_id?"#dcecfb":"#f4f7fa",border:exactDoor?.catalog_id===p.catalog_id?"2px solid #1966a6":"1px solid #dce5ed",borderRadius:12,padding:14,color:"#17344e"}}>
+   <strong style={{display:"block"}}>{p.manufacturer} {p.model}</strong>
+   <span style={{display:"block",fontSize:13,marginTop:5}}>{p.width_ft} × {p.height_ft} ft · {p.color} · {p.window_option||"No Windows"}</span>
+   <strong style={{display:"block",marginTop:9,fontSize:17}}>{formatCurrency(Number(p.standard_price))}</strong>
+   </button>)}
+   </div></div>}
   {loading?<p>Loading approved prices...</p>:<div className="form-grid">
-   <label className="form-field"><span>Door Style</span><select value={style} onChange={e=>setStyle(e.target.value)}>{["Standard","Insulated","Carriage House","Modern / Glass"].map(x=><option key={x}>{x}</option>)}</select></label>
-   <label className="form-field"><span>Door Size</span><select value={sizeType} onChange={e=>setSizeType(e.target.value)}>{["Single","Double","Custom"].map(x=><option key={x}>{x}</option>)}</select></label>
    {select("Manufacturer",manufacturer,v=>{setManufacturer(v);setModel("");setWidth("");setHeight("");setColor("");setWindows("")},manufacturers,"Choose manufacturer")}
    {select("Model",model,v=>{setModel(v);setWidth("");setHeight("");setColor("");setWindows("")},models,"Choose model")}
    {select("Exact Door Size",selectedSize,v=>{const [w,h]=v.split("x");setWidth(w||"");setHeight(h||"");setColor("");setWindows("")},sizes,"Choose available size")}
@@ -63,6 +86,6 @@ export function QuickQuotePage(){
   {detail&&<div className="card" style={{marginTop:16}}><h3>Field Measurements & Notes</h3><p className="text-muted">Only verified configurations receive automatic pricing. Custom dimensions require Owner review.</p><div className="form-grid"><label className="form-field"><span>Measured Width (ft)</span><input value={width} onChange={e=>setWidth(e.target.value)} type="number" step=".25"/></label><label className="form-field"><span>Measured Height (ft)</span><input value={height} onChange={e=>setHeight(e.target.value)} type="number" step=".25"/></label></div><label className="form-field"><span>Technician Notes / Track / Spring / Headroom</span><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3}/></label></div>}
   <div className="card" style={{marginTop:16}}><h3>Estimate</h3>{ready?<><p>Door materials: {formatCurrency(doorPrice*quantity)}</p>{openerModel&&<p>Opener: {formatCurrency(openerPrice)}</p>}<p>Labor: {formatCurrency(breakdown.laborTotal)} | Disposal: {formatCurrency(breakdown.doorDisposalTotal+breakdown.openerDisposalTotal)}</p><p>Estimated tax: {formatCurrency(breakdown.tax)}</p><h2>{formatCurrency(breakdown.total)}</h2></>:<p className="alert alert-warning">Select an exact approved configuration to receive a final price. Otherwise request Owner pricing.</p>}
   <div className="form-grid"><label className="form-field"><span>Customer Name</span><input value={customer} onChange={e=>setCustomer(e.target.value)}/></label><label className="form-field"><span>Job Reference</span><input value={job} onChange={e=>setJob(e.target.value)}/></label></div>
-  <button className="btn btn-primary w-full" disabled={!ready} onClick={save}>{saving?"Saving...":"Save Estimate & Prepare for ServiceTitan"}</button></div></div>
+  <div className="flex gap-2" style={{flexWrap:"wrap"}}><button className="btn btn-primary" disabled={!ready} onClick={save}>{saving?"Saving...":"Save Estimate"}</button><button className="btn btn-outline" disabled={!ready} onClick={copy}>Copy for ServiceTitan</button><button className="btn btn-outline" disabled={!ready} onClick={()=>window.print()}>Print / PDF</button></div>{message&&<p className="alert alert-success">{message}</p>}</div></div>
  </div>;
 }
