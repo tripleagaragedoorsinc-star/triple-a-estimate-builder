@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
 import { EstimatesPage } from "@/pages/EstimatesPage";
 import { EstimateBuilderPage } from "@/pages/EstimateBuilderPage";
+import { QuickQuotePage } from "@/pages/QuickQuotePage";
 import { CatalogPage } from "@/pages/CatalogPage";
 import { PricebookPage } from "@/pages/PricebookPage";
 import { UsersPage } from "@/pages/UsersPage";
@@ -28,7 +29,8 @@ function ProtectedRoutes() {
   return (
     <AppLayout isMock={isMock}>
       <Routes>
-        <Route path="/" element={<Navigate to="/estimates" replace />} />
+        <Route path="/" element={<Navigate to="/quick-quote" replace />} />
+        <Route path="/quick-quote" element={<QuickQuotePage />} />
         <Route path="/estimates" element={<EstimatesPage />} />
         <Route path="/estimates/new" element={<EstimateBuilderPage />} />
         <Route path="/estimates/:id" element={<EstimateBuilderPage />} />
