@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from "./supabase";
 import type {
   CatalogItem,
   SupplierPrice,
+  SalesPrice,
   PriceBenchmark,
   Estimate,
   EstimateLine,
@@ -45,6 +46,14 @@ export async function fetchCatalog(): Promise<CatalogItem[]> {
     .order("manufacturer");
   if (error) throw error;
   return (data ?? []) as CatalogItem[];
+}
+
+// ─── Approved selling prices (no supplier cost; requires eb_sales_prices view) ───
+export async function fetchSalesPrices(): Promise<SalesPrice[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("eb_sales_prices").select("*");
+  if (error) throw error;
+  return (data ?? []) as SalesPrice[];
 }
 
 // ─── Supplier Prices (Owner only) ───
@@ -174,7 +183,7 @@ export async function saveEstimate(
   if (lines.length > 0) {
     const { error: lineError } = await supabase
       .from("eb_estimate_lines")
-      .insert(lines.map((l) => ({ ...l, estimate_id: data.id })));
+      .insert(lines.map(({ id: _temporaryId, ...line }) => ({ ...line, estimate_id: data.id })));
     if (lineError) throw lineError;
   }
 
