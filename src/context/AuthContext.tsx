@@ -30,40 +30,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const hasRecoveryHash = window.location.hash.includes("type=recovery");
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (hasRecoveryHash) {
-        setIsRecovery(true);
-        setLoading(false);
-        return;
-      }
-      if (data.session?.user) {
-        fetchMember(data.session.user.id)
-          .then((member) => {
-            if (member && member.active) {
-              setSession({
-                user_id: member.user_id,
-                email: member.email,
-                role: member.role,
-                full_name: member.full_name,
-              });
-            }
-          })
-          .catch(() => {})
-          .finally(() => setLoading(false));
-      } else {
+    let resolved = false;
+    const finishLoading = () => {
+      if (!resolved) {
+        resolved = true;
         setLoading(false);
       }
-    });
+    };
+
+    const timeout = setTimeout(finishLoading, 3000);
+
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (hasRecoveryHash) {
+          setIsRecovery(true);
+          finishLoading();
+          return;
+        }
+        if (data.session?.user) {
+          fetchMember(data.session.user.id)
+            .then((member) => {
+              if (member && member.active) {
+                setSession({
+                  user_id: member.user_id,
+                  email: member.email,
+                  role: member.role,
+                  full_name: member.full_name,
+                });
+              }
+            })
+            .catch(() => {})
+            .finally(finishLoading);
+        } else {
+          finishLoading();
+        }
+      })
+      .catch(() => finishLoading());
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
-        setLoading(false);
+        finishLoading();
         return;
       }
       if (event === "SIGNED_OUT" || !s?.user) {
         setSession(null);
-        setLoading(false);
+        finishLoading();
         return;
       }
       if (supabase) {
@@ -81,11 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               void supabase!.auth.signOut();
             }
           })
-          .catch(() => setLoading(false));
+          .catch(() => finishLoading());
       }
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
