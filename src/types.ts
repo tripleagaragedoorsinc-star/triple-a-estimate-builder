@@ -64,20 +64,39 @@ export interface CatalogItem {
   created_at: string;
 }
 
-export interface SupplierPrice {
-  id: string;
-  catalog_item_id: string | null;
-  supplier: string;
+export interface SalesPrice {
+  catalog_id: string;
+  category: string;
   manufacturer: string;
   model: string;
-  sku: string | null;
-  product_config: Record<string, unknown> | null;
-  unit_cost: number;
-  invoice_date: string;
-  invoice_number: string | null;
-  source_document: string | null;
-  verification_status: "verified" | "unverified" | "pending";
-  created_at: string;
+  design: string | null;
+  color: string | null;
+  width_ft: number | null;
+  height_ft: number | null;
+  panel_type: string | null;
+  window_option: string | null;
+  spring_system: string | null;
+  lift_type: string | null;
+  rail_length: string | null;
+  classification: string | null;
+  notes: string | null;
+  standard_price: number;
+  minimum_price: number;
+  price_date: string | null;
+}
+
+export interface SupplierPrice {
+  id: string;
+  catalog_id: string | null;
+  supplier: string;
+  description: string;
+  size_width: number | null;
+  size_height: number | null;
+  cost: number;
+  price_date: string;
+  source_reference: string | null;
+  verified: boolean;
+  created_at?: string;
 }
 
 export interface PriceBenchmark {
