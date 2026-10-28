@@ -11,6 +11,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { to: "/quick-quote", label: "Quick Quote", icon: <FileText size={16} /> },
   { to: "/estimates", label: "Estimates", icon: <FileText size={16} /> },
   { to: "/catalog", label: "Catalog", icon: <BookOpen size={16} /> },
   { to: "/pricebook", label: "Pricebook", icon: <DollarSign size={16} />, roles: ["owner"] },
