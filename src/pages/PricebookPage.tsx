@@ -150,13 +150,13 @@ export function PricebookPage() {
                     <td>{b.model}</td>
                     <td>{b.classification ?? "—"}</td>
                     <td style={{ textAlign: "right" }} className="money">{formatCurrency(b.supplier_unit_cost)}</td>
-                    <td style={{ textAlign: "right" }} className="money">{formatCurrency(b.adjusted_supplier_cost)}</td>
+                    <td style={{ textAlign: "right" }} className="money">{formatCurrency(b.adjusted_cost)}</td>
                     <td style={{ textAlign: "right", color: "var(--success-600)" }} className="money">{formatCurrency(b.target_material_price)}</td>
-                    <td style={{ textAlign: "right" }} className="money">{b.historical_avg_price != null ? formatCurrency(b.historical_avg_price) : "—"}</td>
+                    <td style={{ textAlign: "right" }} className="money">{b.sold_average != null ? formatCurrency(b.sold_average) : "—"}</td>
                     <td>{b.quote_sample_size}</td>
                     <td>
-                      <span className={`badge ${b.confidence === "high" ? "badge-approved" : b.confidence === "medium" ? "badge-sent" : "badge-dismissed"}`}>
-                        {b.confidence}
+                      <span className={`badge ${b.pricing_status === "verified" ? "badge-approved" : b.pricing_status === "historical" ? "badge-sent" : "badge-dismissed"}`}>
+                        {b.pricing_status}
                       </span>
                     </td>
                   </tr>
