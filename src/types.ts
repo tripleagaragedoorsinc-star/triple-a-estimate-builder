@@ -101,17 +101,21 @@ export interface SupplierPrice {
 
 export interface PriceBenchmark {
   id: string;
+  supplier_price_id: string;
   manufacturer: string;
   model: string;
-  classification: CommercialResidential | null;
+  classification: string;
+  width_ft: number | null;
+  height_ft: number | null;
   supplier_unit_cost: number;
-  adjusted_supplier_cost: number;
+  adjusted_cost: number;
   target_material_price: number;
-  historical_avg_price: number | null;
-  historical_median_price: number | null;
+  quoted_average: number | null;
+  sold_average: number | null;
   quote_sample_size: number;
-  confidence: "high" | "medium" | "low";
-  created_at: string;
+  sold_sample_size: number;
+  pricing_status: string;
+  updated_at: string;
 }
 
 export interface EstimateLine {
