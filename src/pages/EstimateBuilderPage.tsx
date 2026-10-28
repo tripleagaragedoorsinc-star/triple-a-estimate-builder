@@ -87,6 +87,7 @@ export function EstimateBuilderPage() {
   const isOwner = session?.role === "owner";
 
   const [loading, setLoading] = useState(Boolean(id));
+  const [saving, setSaving] = useState(false);
   const [salesPrices, setSalesPrices] = useState<SalesPrice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -141,13 +142,14 @@ export function EstimateBuilderPage() {
     Number(p.width_ft) === Number(d.width_ft) &&
     Number(p.height_ft) === Number(d.height_ft) &&
     (p.color || "").toLowerCase() === (d.color || "").toLowerCase() &&
-    (p.window_option || "") === (d.window_option || "")
+    (p.window_option || "No Windows").trim().toLowerCase() === (d.window_option || "No Windows").trim().toLowerCase()
   );
 
   const findOpenerPrice = (o: EstimateOpenerConfig) => salesPrices.find(p =>
     p.category === "opener" &&
     p.manufacturer.toLowerCase() === o.brand.toLowerCase() &&
-    p.model.toLowerCase() === o.model.toLowerCase()
+    p.model.toLowerCase() === o.model.toLowerCase() &&
+    (p.rail_length || "").trim().toLowerCase() === ((options.doors[0]?.height_ft ?? 7) <= 7 ? "7 ft" : "8 ft")
   );
 
   const breakdown: PricingBreakdown = useMemo(() => calculatePricing(options), [options]);
@@ -221,14 +223,16 @@ export function EstimateBuilderPage() {
   };
 
   const handleSave = async () => {
-    if (!session) return;
+    if (!session || saving) return;
+    setSaving(true);
     setError(null);
     setSaveMsg(null);
     const unpriced = [...options.doors, ...options.openers].some(item => item.model.trim() && (!Number.isFinite(item.selling_price) || item.selling_price <= 0));
-    if (unpriced) { setError("A configured door or opener has no approved selling price. Enter a price before saving."); return; }
+    if (unpriced) { setError("A configured door or opener has no approved selling price. Enter a price before saving."); setSaving(false); return; }
     const hasDoor = options.doors.some((d) => d.model.trim());
     if (!hasDoor) {
       setError("Enter at least one door with a model name.");
+      setSaving(false);
       return;
     }
     try {
@@ -240,13 +244,14 @@ export function EstimateBuilderPage() {
         customerEmail,
         serviceAddress,
         options,
-        status
+        status,
+        id
       );
       setSaveMsg("Estimate saved successfully.");
       if (!id) navigate(`/estimates/${saved.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save estimate.");
-    }
+    } finally { setSaving(false); }
   };
 
   const handleCopyServiceTitan = () => {
@@ -811,8 +816,8 @@ export function EstimateBuilderPage() {
           {/* Actions */}
           <div className="card">
             <div className="flex-col gap-2">
-              <button className="btn btn-primary w-full" onClick={handleSave}>
-                <Save size={16} /> Save Estimate
+              <button className="btn btn-primary w-full" onClick={handleSave} disabled={saving}>
+                <Save size={16} /> {saving ? "Saving..." : "Save Estimate"}
               </button>
               <button className="btn btn-secondary w-full" onClick={handleCopyServiceTitan}>
                 <Copy size={16} /> Copy for ServiceTitan
