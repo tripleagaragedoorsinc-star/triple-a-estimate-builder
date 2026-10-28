@@ -130,7 +130,8 @@ export async function saveEstimate(
   customerEmail: string,
   serviceAddress: string,
   options: EstimateOptions,
-  status: EstimateStatus
+  status: EstimateStatus,
+  existingId?: string
 ): Promise<Estimate> {
   const breakdown = calculatePricing(options);
   const lines = buildEstimateLines(options, breakdown);
@@ -161,33 +162,27 @@ export async function saveEstimate(
     return newEst;
   }
 
-  const { data, error } = await supabase
-    .from("eb_estimates")
-    .insert({
-      created_by: userId,
-      job_reference: jobRef,
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      customer_email: customerEmail,
-      service_address: serviceAddress,
-      status,
-      subtotal: breakdown.subtotal,
-      tax: breakdown.tax,
-      total: breakdown.total,
-      options,
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
-
+  const payload = {
+    created_by: userId, job_reference: jobRef, customer_name: customerName,
+    customer_phone: customerPhone, customer_email: customerEmail,
+    service_address: serviceAddress, status, subtotal: breakdown.subtotal,
+    tax: breakdown.tax, total: breakdown.total, options,
+  };
+  const result = existingId
+    ? await supabase.from("eb_estimates").update(payload).eq("id", existingId).select("id").single()
+    : await supabase.from("eb_estimates").insert(payload).select("id").single();
+  if (result.error) throw result.error;
+  const savedId = result.data.id;
+  if (existingId) {
+    const { error: deleteError } = await supabase.from("eb_estimate_lines").delete().eq("estimate_id", savedId);
+    if (deleteError) throw deleteError;
+  }
   if (lines.length > 0) {
-    const { error: lineError } = await supabase
-      .from("eb_estimate_lines")
-      .insert(lines.map(({ id: _temporaryId, ...line }) => ({ ...line, estimate_id: data.id })));
+    const { error: lineError } = await supabase.from("eb_estimate_lines")
+      .insert(lines.map(({ id: _temporaryId, ...line }) => ({ ...line, estimate_id: savedId })));
     if (lineError) throw lineError;
   }
-
-  return fetchEstimate(data.id) as Promise<Estimate>;
+  return fetchEstimate(savedId) as Promise<Estimate>;
 }
 
 export async function updateEstimateStatus(
