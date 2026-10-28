@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Plus, Trash2, Copy, Save, ArrowLeft, CircleCheck as CheckCircle2, Package, DollarSign, FileDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchEstimate, saveEstimate, fetchOrderChecks, createOrderChecksForEstimate, updateOrderCheck, ownerOverridePrice } from "@/lib/data";
+import { fetchEstimate, fetchSalesPrices, saveEstimate, fetchOrderChecks, createOrderChecksForEstimate, updateOrderCheck, ownerOverridePrice } from "@/lib/data";
 import {
   TAX_RATE_DEFAULT,
   MIN_LABOR,
@@ -15,7 +15,7 @@ import {
   formatCurrency,
   type PricingBreakdown,
 } from "@/lib/pricing";
-import type { EstimateDoorConfig, EstimateOpenerConfig, EstimateOptions, EstimateStatus, OrderCheck } from "@/types";
+import type { EstimateDoorConfig, EstimateOpenerConfig, EstimateOptions, EstimateStatus, OrderCheck, SalesPrice } from "@/types";
 
 const doorDesigns = [
   { value: "traditional_raised_panel", label: "Traditional Raised Panel" },
@@ -87,6 +87,7 @@ export function EstimateBuilderPage() {
   const isOwner = session?.role === "owner";
 
   const [loading, setLoading] = useState(Boolean(id));
+  const [salesPrices, setSalesPrices] = useState<SalesPrice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [options, setOptions] = useState<EstimateOptions>(defaultOptions);
@@ -129,6 +130,26 @@ export function EstimateBuilderPage() {
     return () => { cancelled = true; };
   }, [id]);
 
+  useEffect(() => {
+    fetchSalesPrices().then(setSalesPrices).catch(() => setSalesPrices([]));
+  }, []);
+
+  const findDoorPrice = (d: EstimateDoorConfig) => salesPrices.find(p =>
+    p.category === "door" &&
+    p.manufacturer.toLowerCase() === d.manufacturer.toLowerCase() &&
+    p.model.toLowerCase() === d.model.toLowerCase() &&
+    Number(p.width_ft) === Number(d.width_ft) &&
+    Number(p.height_ft) === Number(d.height_ft) &&
+    (p.color || "").toLowerCase() === (d.color || "").toLowerCase() &&
+    (p.window_option || "") === (d.window_option || "")
+  );
+
+  const findOpenerPrice = (o: EstimateOpenerConfig) => salesPrices.find(p =>
+    p.category === "opener" &&
+    p.manufacturer.toLowerCase() === o.brand.toLowerCase() &&
+    p.model.toLowerCase() === o.model.toLowerCase()
+  );
+
   const breakdown: PricingBreakdown = useMemo(() => calculatePricing(options), [options]);
 
   const updateDoor = useCallback((index: number, updates: Partial<EstimateDoorConfig>) => {
@@ -144,6 +165,22 @@ export function EstimateBuilderPage() {
       return { ...prev, doors };
     });
   }, []);
+
+  const applyDoorPrice = (index: number) => {
+    const door = options.doors[index];
+    const match = findDoorPrice(door);
+    if (!match) { setError("No exact approved price for this configuration. Owner review required."); return; }
+    updateDoor(index, { selling_price: Math.round(Number(match.standard_price) * (1 - Math.min(20, door.discount_percent) / 100) * 100) / 100 });
+    setError(null);
+  };
+
+  const applyOpenerPrice = (index: number) => {
+    const opener = options.openers[index];
+    const match = findOpenerPrice(opener);
+    if (!match) { setError("No approved opener price. Owner review required."); return; }
+    updateOpener(index, { selling_price: Math.round(Number(match.standard_price) * (1 - Math.min(20, opener.discount_percent) / 100) * 100) / 100 });
+    setError(null);
+  };
 
   const addDoor = () => {
     setOptions((prev) => ({ ...prev, doors: [...prev.doors, emptyDoor()] }));
