@@ -1,35 +1,13 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Triple A Smart Estimate Builder</title>
-<style>:root{font-family:system-ui,Arial;background:#f3f5f9;color:#182437}*{box-sizing:border-box}body{margin:0}header{background:#102641;color:white;padding:22px 5%}header h1{margin:3px 0;font-size:24px}main{max-width:1080px;margin:24px auto;padding:0 16px;display:grid;grid-template-columns:1.3fr 1fr;gap:18px}.card{background:white;border-radius:14px;padding:22px;box-shadow:0 3px 18px #162f4712}h2{font-size:18px;margin:0 0 18px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{font-size:13px;font-weight:650;display:block;margin-bottom:5px}input,select,textarea{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}textarea{min-height:100px}.field{margin-bottom:13px}.check{display:flex;align-items:flex-start;gap:9px;margin:12px 0;font-size:14px}.check input{width:auto;margin-top:3px}.money{font-size:32px;font-weight:800;color:#0c6955}.muted{color:#64748b;font-size:12px}.row{display:flex;justify-content:space-between;margin:10px 0;gap:12px}button{background:#df641d;color:white;border:0;padding:12px 16px;border-radius:8px;font-weight:700;cursor:pointer;margin:5px 4px 5px 0}button.alt{background:#193956}.span{grid-column:1/-1}.note{background:#fff5df;padding:12px;border-radius:8px;font-size:13px}.private{color:#b54c10;font-weight:700}@media(max-width:720px){main{grid-template-columns:1fr}.fields{grid-template-columns:1fr}header{padding:18px}}</style></head>
-<body><header><small>TRIPLE A GARAGE DOORS · INTERNAL PROTOTYPE</small><h1>Smart Estimate Builder</h1><small>Installation estimates · Supplier order verification · ServiceTitan copy</small></header>
-<main><section class="card"><h2>Installation Configuration</h2><div class="fields">
-<div class="field"><label>Customer / Job Reference</label><input id="customer" placeholder="Demo reference only"></div>
-<div class="field"><label>Supplier</label><select id="supplier"><option>Amarr</option><option>C.H.I.</option><option>Haas</option><option>Other / Custom</option></select></div>
-<div class="field"><label>Door Model</label><input id="model" placeholder="Enter exact model"></div>
-<div class="field"><label>Design</label><select id="design"><option>Traditional Raised Panel</option><option>Flush / Modern</option><option>Carriage House</option><option>Full View Glass</option><option>Custom</option></select></div>
-<div class="field"><label>Width (feet)</label><input id="width" type="number" min="1" value="9"></div>
-<div class="field"><label>Height (feet)</label><input id="height" type="number" min="1" value="7"></div>
-<div class="field"><label>Color / Finish</label><input id="color" placeholder="Exact manufacturer finish"></div>
-<div class="field"><label>Door Quantity</label><input id="qty" type="number" min="1" value="1"></div>
-<div class="field"><label>Insulation</label><select id="insulation"><option>Non-insulated</option><option>Polystyrene</option><option>Polyurethane</option><option>Other</option></select></div>
-<div class="field"><label>Windows</label><select id="windows"><option>No windows</option><option>Standard windows</option><option>Decorative windows</option><option>Custom glazing</option></select></div>
-<div class="field"><label>Supplier Door Cost ($)</label><input id="doorcost" type="number" min="0" value="1200"></div>
-<div class="field"><label>Supplier Opener Cost / Door ($)</label><input id="opener" type="number" min="0" value="0"></div>
-<div class="field"><label>Labor Per Door ($550–$1,000)</label><input id="labor" type="number" min="550" max="1000" value="650"></div>
-<div class="field"><label>Supplier Price Increase (%)</label><input id="increase" type="number" value="10" min="0"></div>
-</div><div class="check"><input id="custom" type="checkbox"><label for="custom">Custom order — supplier confirmation required</label></div><div class="check"><input id="disposal" type="checkbox" checked><label for="disposal">Remove and dispose of existing doors</label></div><div class="field"><label>Installation Scope / Notes</label><textarea id="notes" placeholder="Job conditions, framing, track configuration, electrical requirements..."></textarea></div><div class="note">Illustrative supplier costs only. All model specifications, inclusions and custom dimensions must be verified with the supplier.</div></section>
-<section><div class="card"><h2>Estimate Summary</h2><div id="breakdown"></div><div class="row"><strong>Subtotal Before Tax</strong><span id="total" class="money">$0</span></div><p class="muted">Supplier costs shown here are for prototype testing only. Do not enter confidential or customer data.</p><button onclick="copyEstimate()">Copy for ServiceTitan</button><button class="alt" onclick="window.print()">Print</button><button class="alt" onclick="saveDraft()">Save Demo Draft</button></div>
-<div class="card" style="margin-top:18px"><h2>Supplier Ordering Guide</h2><div id="checklist"></div><button class="alt" onclick="copyChecklist()">Copy Checklist</button><p class="muted">Verification is required for every order; included parts vary by manufacturer and configuration.</p></div></section></main>
-<script>
-const ids=['customer','supplier','model','design','width','height','color','qty','insulation','windows','doorcost','opener','labor','increase','custom','disposal','notes'];
-const checks=['Confirm exact manufacturer model, finish and opening dimensions','Verify headroom, sideroom, backroom and track radius','Confirm vertical and horizontal door tracks are included','Confirm torsion system, spring specification and door weight with supplier','Verify shaft, drums, cables, bearings and mounting hardware','Confirm hinges, rollers, bottom seal and weatherstripping','Check opener rail length separately from door tracks','Confirm opener reinforcement, brackets, remotes and accessories','Confirm freight, lead time, delivery access and unloading','Identify every part that must be ordered separately'];
-document.getElementById('checklist').innerHTML=checks.map((x,i)=>'<div class="check"><input type="checkbox" id="c'+i+'"><label for="c'+i+'">'+x+'</label></div>').join('');
-const val=id=>document.getElementById(id).value, num=id=>Math.max(0,Number(val(id))||0), money=n=>n.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2});
-function calc(){const q=Math.max(1,num('qty')),rate=1+num('increase')/100,door=q*num('doorcost')*rate*2,opener=q*num('opener')*rate*2,labor=q*num('labor'),dispose=document.getElementById('disposal').checked?(q===1?150:q===2?200:200+75*(q-2)):0,total=door+opener+labor+dispose;document.getElementById('breakdown').innerHTML=[['Doors',door],['Openers',opener],['Installation Labor',labor],['Disposal',dispose]].map(([k,v])=>'<div class="row"><span>'+k+'</span><strong>'+money(v)+'</strong></div>').join('');document.getElementById('total').textContent=money(total);return {q,door,opener,labor,dispose,total};}
-function exportText(){const p=calc();return 'TRIPLE A GARAGE DOORS — INSTALLATION ESTIMATE\nReference: '+val('customer')+'\nDoor: '+val('supplier')+' '+val('model')+' / '+val('design')+'\nSize: '+val('width')+' x '+val('height')+' ft; Quantity: '+p.q+'\nColor: '+val('color')+'; Insulation: '+val('insulation')+'; Windows: '+val('windows')+'\nDoors: '+money(p.door)+'\nOpeners: '+money(p.opener)+'\nInstallation labor: '+money(p.labor)+'\nDisposal: '+money(p.dispose)+'\nSubtotal before tax: '+money(p.total)+'\nScope: '+val('notes')+'\nCustom: '+(document.getElementById('custom').checked?'Supplier confirmation required':'No');}
-async function copyEstimate(){try{await navigator.clipboard.writeText(exportText());alert('Customer-facing estimate copied.');}catch(e){alert('Copy unavailable in this browser.');}}
-async function copyChecklist(){const text=checks.map((x,i)=>(document.getElementById('c'+i).checked?'[x] ':'[ ] ')+x).join('\n');try{await navigator.clipboard.writeText(text);alert('Checklist copied.');}catch(e){alert('Copy unavailable.');}}
-function saveDraft(){const data={};ids.forEach(id=>data[id]=document.getElementById(id).type==='checkbox'?document.getElementById(id).checked:val(id));localStorage.setItem('triple_a_demo_draft',JSON.stringify(data));alert('Demo draft saved in this browser only.');}
-try{const saved=JSON.parse(localStorage.getItem('triple_a_demo_draft')||'null');if(saved)ids.forEach(id=>{if(saved[id]!==undefined){const el=document.getElementById(id);if(el.type==='checkbox')el.checked=saved[id];else el.value=saved[id];}});}catch(e){}
-ids.forEach(id=>document.getElementById(id).addEventListener('input',calc));calc();
-</script></body></html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="theme-color" content="#102641" />
+    <title>Triple A Smart Estimate Builder</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

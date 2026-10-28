@@ -1,0 +1,177 @@
+import { useEffect, useState, useMemo } from "react";
+import { DollarSign, Search, Upload } from "lucide-react";
+import { fetchSupplierPrices, fetchBenchmarks } from "@/lib/data";
+import { formatCurrency, COST_ESCALATION, MATERIAL_MARKUP } from "@/lib/pricing";
+import type { SupplierPrice, PriceBenchmark } from "@/types";
+
+export function PricebookPage() {
+  const [prices, setPrices] = useState<SupplierPrice[]>([]);
+  const [benchmarks, setBenchmarks] = useState<PriceBenchmark[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"prices" | "benchmarks">("prices");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [p, b] = await Promise.all([fetchSupplierPrices(), fetchBenchmarks()]);
+        setPrices(p);
+        setBenchmarks(b);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load pricebook.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const filteredPrices = useMemo(() => {
+    const q = search.toLowerCase();
+    return prices.filter((p) =>
+      p.manufacturer.toLowerCase().includes(q) ||
+      p.model.toLowerCase().includes(q) ||
+      p.sku?.toLowerCase().includes(q) ||
+      p.supplier.toLowerCase().includes(q)
+    );
+  }, [prices, search]);
+
+  const filteredBenchmarks = useMemo(() => {
+    const q = search.toLowerCase();
+    return benchmarks.filter((b) =>
+      b.manufacturer.toLowerCase().includes(q) ||
+      b.model.toLowerCase().includes(q)
+    );
+  }, [benchmarks, search]);
+
+  if (loading) return <div className="loading-center"><div className="spinner" /> Loading pricebook...</div>;
+
+  return (
+    <div className="fade-in">
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">
+            <DollarSign size={20} />
+            Owner Pricebook
+          </div>
+          <button className="btn btn-outline btn-sm" disabled title="CSV import coming soon">
+            <Upload size={14} /> Import Supplier Invoice
+          </button>
+        </div>
+
+        {error && <div className="alert alert-error">{error}</div>}
+
+        <div className="alert alert-warning">
+          Supplier costs and margins are visible to Owner only. Never share with sales staff or customers.
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <button
+            className={`btn btn-sm ${tab === "prices" ? "btn-primary" : "btn-outline"}`}
+            onClick={() => setTab("prices")}
+          >
+            Supplier Prices ({prices.length})
+          </button>
+          <button
+            className={`btn btn-sm ${tab === "benchmarks" ? "btn-primary" : "btn-outline"}`}
+            onClick={() => setTab("benchmarks")}
+          >
+            Price Benchmarks ({benchmarks.length})
+          </button>
+        </div>
+
+        <div className="form-field mb-4">
+          <div style={{ position: "relative" }}>
+            <Search size={16} style={{ position: "absolute", left: 12, top: 12, color: "var(--neutral-400)" }} />
+            <input
+              type="text"
+              placeholder="Search supplier prices..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: 36 }}
+            />
+          </div>
+        </div>
+
+        {tab === "prices" ? (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Supplier</th>
+                  <th>Manufacturer</th>
+                  <th>Model</th>
+                  <th>SKU</th>
+                  <th style={{ textAlign: "right" }}>Unit Cost</th>
+                  <th>Invoice</th>
+                  <th>Invoice Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPrices.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.supplier}</td>
+                    <td>{p.manufacturer}</td>
+                    <td>{p.model}</td>
+                    <td className="font-mono">{p.sku || "—"}</td>
+                    <td style={{ textAlign: "right" }} className="money">{formatCurrency(p.unit_cost)}</td>
+                    <td>{p.invoice_number || "—"}</td>
+                    <td className="text-muted">{p.invoice_date ? new Date(p.invoice_date).toLocaleDateString() : "—"}</td>
+                    <td>
+                      <span className={`badge ${p.verification_status === "verified" ? "badge-approved" : p.verification_status === "pending" ? "badge-sent" : "badge-dismissed"}`}>
+                        {p.verification_status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Manufacturer</th>
+                  <th>Model</th>
+                  <th>Classification</th>
+                  <th style={{ textAlign: "right" }}>Supplier Cost</th>
+                  <th style={{ textAlign: "right" }}>Adjusted Cost (x{COST_ESCALATION})</th>
+                  <th style={{ textAlign: "right" }}>Target Price (x{MATERIAL_MARKUP})</th>
+                  <th style={{ textAlign: "right" }}>Avg Sold</th>
+                  <th>Samples</th>
+                  <th>Confidence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBenchmarks.map((b) => (
+                  <tr key={b.id}>
+                    <td>{b.manufacturer}</td>
+                    <td>{b.model}</td>
+                    <td>{b.classification ?? "—"}</td>
+                    <td style={{ textAlign: "right" }} className="money">{formatCurrency(b.supplier_unit_cost)}</td>
+                    <td style={{ textAlign: "right" }} className="money">{formatCurrency(b.adjusted_supplier_cost)}</td>
+                    <td style={{ textAlign: "right", color: "var(--success-600)" }} className="money">{formatCurrency(b.target_material_price)}</td>
+                    <td style={{ textAlign: "right" }} className="money">{b.historical_avg_price != null ? formatCurrency(b.historical_avg_price) : "—"}</td>
+                    <td>{b.quote_sample_size}</td>
+                    <td>
+                      <span className={`badge ${b.confidence === "high" ? "badge-approved" : b.confidence === "medium" ? "badge-sent" : "badge-dismissed"}`}>
+                        {b.confidence}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <p className="text-muted mt-4">
+          Pricing formula: Adjusted Cost = Supplier Cost x {COST_ESCALATION}. Target Price = Adjusted Cost x {MATERIAL_MARKUP}.
+          Historical averages require enough comparable sold estimates with known model, dimensions and scope.
+        </p>
+      </div>
+    </div>
+  );
+}
