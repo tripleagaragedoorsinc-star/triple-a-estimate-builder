@@ -57,7 +57,7 @@ export async function fetchSupplierPrices(): Promise<SupplierPrice[]> {
   const { data, error } = await supabase
     .from("eb_supplier_prices")
     .select("*")
-    .order("invoice_date", { ascending: false });
+    .order("price_date", { ascending: false });
   if (error) throw error;
   return (data ?? []) as SupplierPrice[];
 }
