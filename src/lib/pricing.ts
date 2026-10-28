@@ -56,7 +56,7 @@ export function calculateOpenerSellingPrice(
   if (supplierCost <= 0) return 0;
   const adjustedCost = supplierCost * COST_ESCALATION;
   const standardPrice = adjustedCost * MATERIAL_MARKUP;
-  return standardPrice * (1 - clampDiscount(discountPercent));
+  return Math.round(standardPrice * (1 - clampDiscount(discountPercent / 100)) * 100) / 100;
 }
 
 export function calculateDoorDisposal(doorCount: number): number {
