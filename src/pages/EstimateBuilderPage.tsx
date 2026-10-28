@@ -187,6 +187,8 @@ export function EstimateBuilderPage() {
     if (!session) return;
     setError(null);
     setSaveMsg(null);
+    const unpriced = [...options.doors, ...options.openers].some(item => item.model.trim() && (!Number.isFinite(item.selling_price) || item.selling_price <= 0));
+    if (unpriced) { setError("A configured door or opener has no approved selling price. Enter a price before saving."); return; }
     const hasDoor = options.doors.some((d) => d.model.trim());
     if (!hasDoor) {
       setError("Enter at least one door with a model name.");
@@ -308,6 +310,8 @@ export function EstimateBuilderPage() {
         <ArrowLeft size={16} /> Back to Estimates
       </Link>
 
+      <datalist id="verified-door-models">{["Lincoln LI1000","Lincoln LI2000","Lincoln LI3000","Carriage Court CC4000","Classica CL3000","Olympus OL3200","C.H.I. 3282"].map(m => <option key={m} value={m} />)}</datalist>
+      <datalist id="verified-opener-models">{["LiftMaster 2220L","LiftMaster 2420L","LiftMaster 6580L","LiftMaster 6690L"].map(m => <option key={m} value={m} />)}</datalist>
       <div className="form-grid" style={{ gridTemplateColumns: "1.4fr 1fr", alignItems: "start" }}>
         {/* Left column: Configuration */}
         <div className="flex-col gap-4">
@@ -372,7 +376,7 @@ export function EstimateBuilderPage() {
                   </div>
                   <div className="form-field">
                     <label>Model</label>
-                    <input value={door.model} onChange={(e) => updateDoor(i, { model: e.target.value })} placeholder="Exact model" />
+                    <input value={door.model} onChange={(e) => updateDoor(i, { model: e.target.value })} placeholder="Select or enter model" list="verified-door-models" />
                   </div>
                   <div className="form-field">
                     <label>Width (ft)</label>
@@ -483,7 +487,7 @@ export function EstimateBuilderPage() {
                     </div>
                     <div className="form-field">
                       <label>Model</label>
-                      <input value={opener.model} onChange={(e) => updateOpener(i, { model: e.target.value })} placeholder="Opener model" />
+                      <input value={opener.model} onChange={(e) => updateOpener(i, { model: e.target.value })} placeholder="Select or enter model" list="verified-opener-models" />
                     </div>
                     <div className="form-field">
                       <label>Quantity</label>
