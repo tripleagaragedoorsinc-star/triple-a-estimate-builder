@@ -413,7 +413,7 @@ export function EstimateBuilderPage() {
                   </div>
                   <div className="form-field">
                     <label>Model</label>
-                    <input value={door.model} onChange={(e) => updateDoor(i, { model: e.target.value })} placeholder="Select or enter model" list="verified-door-models" />
+                    <input value={door.model} onChange={(e) => updateDoor(i, { model: e.target.value })} placeholder="Select or enter model" list="verified-door-models" /><button type="button" className="btn btn-outline btn-sm" onClick={() => applyDoorPrice(i)}>Apply Approved Price</button>
                   </div>
                   <div className="form-field">
                     <label>Width (ft)</label>
@@ -524,7 +524,7 @@ export function EstimateBuilderPage() {
                     </div>
                     <div className="form-field">
                       <label>Model</label>
-                      <input value={opener.model} onChange={(e) => updateOpener(i, { model: e.target.value })} placeholder="Select or enter model" list="verified-opener-models" />
+                      <input value={opener.model} onChange={(e) => updateOpener(i, { model: e.target.value })} placeholder="Select or enter model" list="verified-opener-models" /><button type="button" className="btn btn-outline btn-sm" onClick={() => applyOpenerPrice(i)}>Apply Approved Price</button>
                     </div>
                     <div className="form-field">
                       <label>Quantity</label>
